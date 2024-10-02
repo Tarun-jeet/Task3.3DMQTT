@@ -1,14 +1,16 @@
 #include <WiFiNINA.h>
 #include <PubSubClient.h>
+#include "arduino_secrets.h"
 
 // Define pins for Ultrasonic Sensor and LED
 #define TRIG_PIN 2
 #define ECHO_PIN 3
 #define LED_PIN 4
 int status = WL_IDLE_STATUS;
+
 // Wi-Fi Credentials
-const char* ssid = "Bsnl2439";
-const char* pass = "7550661313";
+char ssid[] = SECRET_SSID;        
+char pass[] = SECRET_PASS;
 
 // MQTT Broker Details
 const char* mqtt_server = "p586ca11.ala.dedicated.aws.emqxcloud.com";
@@ -19,16 +21,17 @@ const char* mqtt_clientId = "Task3.3D";       // MQTT Client ID
 const char* topic_publish = "SIT210/wave";
 const char* topic_subscribe = "SIT210/wave";
 
-// Create Wi-Fi and MQTT client objects
-WiFiClient esp_client;
-PubSubClient mqtt_client(esp_client);
+// Creating Wi-Fi and MQTT client objects
+WiFiClient client;
+PubSubClient mqtt_client(client);
 
 unsigned long currentMillis, previousMillis, dataSendingInterval = 1000; // 1 second interval
 
 void setup() {
+  
   Serial.begin(115200);
 
-  // Initialize LED and Ultrasonic sensor pins
+  // Initializing LED and Ultrasonic sensor pins
   pinMode(LED_PIN, OUTPUT);
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
@@ -40,6 +43,7 @@ void setup() {
   setup_wifi();
   delay(10000);
   Serial.println("WIFI CONNECTED!! ");
+  
   // Set MQTT server and callback function
   mqtt_client.setServer(mqtt_server, mqtt_port);
   mqtt_client.setCallback(callback);
@@ -49,17 +53,19 @@ void setup() {
 }
 
 void loop() {
+  //if not connected then again trying to connect
   if (!mqtt_client.connected()) {
     mqtt_connect();
   }
+  
   mqtt_client.loop();
 
-  // Check for Ultrasonic sensor wave detection
+  // Checking for Ultrasonic sensor wave detection
   long distance = measureDistance();
   if (distance < 20) {  // Adjusting threshold
     Serial.println("Wave detected!");
 
-    // Publish your name to the topic
+    // Published my name to the topic
     String message = "Tarunjeet";
     mqtt_client.publish(topic_publish, message.c_str());
 
@@ -109,12 +115,16 @@ void setup_wifi()
 
 // Connect to MQTT broker
 void mqtt_connect() {
+  //connecting the mqtt repeatedly till not connected
   while (!mqtt_client.connected()) {
     Serial.print("Connecting to MQTT...");
+    //if connected then providing my mqtt details
     if (mqtt_client.connect(mqtt_clientId, mqtt_user, mqtt_password)) {
       Serial.println("connected");
       mqtt_client.subscribe(topic_subscribe);  // Subscribe to the topic
-    } else {
+    } 
+    //error if not connected successfully
+    else {
       Serial.print("Failed to connect, rc=");
       Serial.print(mqtt_client.state());
       Serial.println(" trying again in 5 seconds");
